@@ -1,0 +1,17 @@
+// =================================================================
+//
+// Work of the U.S. Department of the Navy, NIWC Pacific.
+// Released as open source under the MIT License.  See LICENSE file.
+//
+// =================================================================
+module pkl.utils.tests.utils_test
+
+amends "pkl:test"
+
+import "../utils.pkl"
+
+local world = utils.basename("world.txt")
+
+local hello_world = utils.basename("hello/world.txt")
+
+local hello_beautiful_world = utils.basename("hello/beautiful/world.txt")

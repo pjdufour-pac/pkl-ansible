@@ -1,0 +1,53 @@
+// =================================================================
+//
+// Work of the U.S. Department of the Navy, NIWC Pacific.
+// Released as open source under the MIT License.  See LICENSE file.
+//
+// =================================================================
+module basePklProject
+
+amends "pkl:Project"
+
+import "pkl:reflect"
+
+local myModule = reflect.Module(module)
+
+local packageName: String =
+  findRootModule(reflect.Module(module))
+    .relativePathTo(module)
+    .last
+
+local function findRootModule(mod: reflect.Module): Module =
+  let (supermodule = mod.supermodule)
+    if (supermodule == null || !supermodule.isAmend) mod.reflectee
+    else findRootModule(supermodule)
+
+local allTests = import*("**/tests/**.pkl").keys.filter((it) -> !it.contains("tests/fixtures/"))
+
+package {
+  name = packageName
+  apiTests = tests // api tests are shared with module tests
+  baseUri = "package://github.com/pjdufour-pac/pkl-packages/\(name)"
+  packageZipUrl = "https://github.com/pjdufour-pac/pkl-packages/releases/download/\(name)@\(version)/\(name)@\(version).zip"
+  license = "Apache-2.0"
+  authors {
+    "Patrick Dufour <patrick.j.dufour.civ@us.navy.mil>"
+  }
+  exclude {
+    "examples/**"
+    "scripts/**"
+    "tests/**"
+  }
+  description = myModule.docComment
+  issueTracker = "https://github.com/pjdufour-pac/pkl-packages/issues"
+  sourceCode = "https://github.com/pjdufour-pac/pkl-packages/tree/\(name)@\(version)/packages/\(name)"
+  sourceCodeUrlScheme = "https://github.com/pjdufour-pac/pkl-packages/blob/\(name)@\(version)/packages/\(name)%{path}#L%{line}-%{endLine}"
+}
+
+tests {
+  for (test in allTests) {
+    when (test.split("/").first == package.name) {
+      test.replaceFirst(package.name, ".")
+    }
+  }
+}

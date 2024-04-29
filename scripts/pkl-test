@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# =================================================================
+#
+# Work of the U.S. Department of the Navy, NIWC Pacific.
+# Released as open source under the MIT License.  See LICENSE file.
+#
+# =================================================================
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+set -euo pipefail
+
+if ! command -v pkl > /dev/null; then
+  echo "pkl command is missing"
+  exit 1
+fi
+
+function usage() {
+  echo "Usage: ${0##*/} INPUT_DIR"
+  exit 1
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+fi
+
+input_dir=$1
+
+pushd "${input_dir}"
+
+testfiles=($(find . -name '*_test.pkl'))
+
+for testfile in "${testfiles[@]}"; do
+  if [[ "${testfile}" == "" ]]; then
+    continue
+  fi
+  echo "Testing ${testfile}"
+  if ! pkl eval "${testfile}" 1> /dev/null ; then
+    exit 1
+  fi
+  echo "Test complete"
+  echo "----------------------------------------------------------------------"
+done
+
+popd

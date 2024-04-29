@@ -1,0 +1,32 @@
+// =================================================================
+//
+// Work of the U.S. Department of the Navy, NIWC Pacific.
+// Released as open source under the MIT License.  See LICENSE file.
+//
+// =================================================================
+@ModuleInfo { minPklVersion = "0.25.0" }
+module pkl.utils.utils
+
+function distinct(list: List): List =
+    list.distinctBy((x) -> x)
+
+function flatten(list: List|Listing): List =
+    if(list is List)
+        list.fold(List(), (acc, x) -> (if(x is List) acc + flatten(x) else acc + List(x)))
+    else
+        list.toList().fold(List(), (acc, x) -> (if(x is List) acc + flatten(x) else acc + List(x)))
+
+function read_checksums(file: String): Map<String,String> =
+    read(file).text.split("\n").map((line) -> (
+        let (parts = line.split(Regex("\\s+"))) Map(parts[1], parts[0])
+    )).fold(Map(), (acc, x) -> acc + x)
+
+function basename(path: String): String =
+    let (parts = path.split("/"))
+    parts[parts.length-1]
+
+function slugify(name: String): String =
+    name
+    .replaceAll("-", "_")
+    .replaceAll(".", "_")
+    .replaceAll("+", "_plus")
