@@ -1,0 +1,9 @@
+extends "shell.pkl"
+
+role = NewAnsibleRoleDefinitionShell("test")
+
+role_with_options = NewAnsibleRoleDefinitionShellOptions("test", new Mapping {
+    ["defaults"] = new Mapping<String,unknown> {
+        ["hello"] = "world"
+    }
+})

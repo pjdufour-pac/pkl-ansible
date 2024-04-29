@@ -1,0 +1,23 @@
+open module firewalld
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/shell.pkl" as tasks_shell
+
+class FactoryFirewallD {
+
+    function AllowService(_name: String, service_name: String): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Allow service through the firewall (CentOS)"
+        shell = "firewall-cmd --zone=public --add-service="+service_name+" && firewall-cmd --zone=public --permanent --add-service="+service_name
+        `when` = utils.slugify(_name)+"_update_firewall and ansible_distribution in [\"CentOS\", \"RedHat\"]"
+    }
+
+    function AllowServices(_name: String, service_names: List<String>): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Allow service through the firewall (CentOS)"
+        shell = "firewall-cmd --zone=public --add-service={{ item }} && firewall-cmd --zone=public --permanent --add-service={{ item }}"
+        with_items = service_names
+        `when` = utils.slugify(_name)+"_update_firewall and ansible_distribution in [\"CentOS\", \"RedHat\"]"
+    }
+}

@@ -1,0 +1,9 @@
+extends "packages.pkl"
+
+role = NewAnsibleRoleDefinitionPackages("test", "test-apt", "test-yum")
+
+role_with_options = NewAnsibleRoleDefinitionPackagesOptions("test", "test-apt", "test-yum", new Mapping {
+    ["defaults"] = new Mapping<String,unknown> {
+        ["hello"] = "world"
+    }
+})

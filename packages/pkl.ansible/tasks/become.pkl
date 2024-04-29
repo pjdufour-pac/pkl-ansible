@@ -1,0 +1,8 @@
+open module become
+
+extends "base.pkl"
+
+abstract class AnsibleTaskDefinitionBecome extends AnsibleTaskDefinition {
+    become: When?
+    become_user: String?
+}

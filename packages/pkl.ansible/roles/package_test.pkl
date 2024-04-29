@@ -1,0 +1,9 @@
+extends "package.pkl"
+
+role = NewAnsibleRoleDefinitionPackage("test")
+
+role_with_options = NewAnsibleRoleDefinitionPackageOptions("test", new Mapping {
+    ["defaults"] = new Mapping<String,unknown> {
+        ["hello"] = "world"
+    }
+})

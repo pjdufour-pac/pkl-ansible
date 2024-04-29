@@ -1,0 +1,95 @@
+open module rpm
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/core.pkl" as tasks_core
+import "../tasks/shell.pkl" as tasks_shell
+
+class FactoryRpm {
+    function ImportRpmKey(_name: String, rpm_key: RpmKey): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Import RPM Key"
+        shell = new Shell {
+            cmd = "rpm --import /opt/"+(_name.replaceAll("-", "_"))+"/asc/{{ "+(rpm_key.name.replaceAll("-", "_"))+"_key_url | basename }}"
+        }
+    }
+
+    function ImportRpmKeys(_name: String, rpm_keys: Listing<RpmKey>): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Import RPM Keys"
+        shell = new Shell {
+            cmd = "rpm --import {{ item }}"
+        }
+        with_items = rpm_keys.toList().map((rpm_key) -> "/opt/"+(_name.replaceAll("-", "_"))+"/asc/{{ "+rpm_key.name.replaceAll("-", "_")+"_key_url | basename }}")
+    }
+
+    function DownloadRpmKey(_name: String, rpm_key: RpmKey): tasks_core.AnsibleTaskDefinitionIncludeRole = new tasks_core.AnsibleTaskDefinitionIncludeRole {
+        name = "Download RPM Key"
+        include_role = new IncludeRole {
+            name = "fetch"
+        }
+        vars = new Mapping<String,unknown> {
+            ["file_url"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_url }}"
+            ["file_checksum"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_checksum }}"
+            ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/asc"
+            ["validate_certs"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_validate_certs }}"
+        }
+    }
+
+    function DownloadRpmKeys(_name: String, rpm_keys: Listing<RpmKey>): tasks_core.AnsibleTaskDefinitionIncludeRole = new tasks_core.AnsibleTaskDefinitionIncludeRole {
+        name = "Download RPM Keys"
+        include_role = new IncludeRole {
+            name = "fetch"
+        }
+        vars = new Mapping<String,unknown> {
+            ["file_url"] = "{{ item.file_url }}"
+            ["file_checksum"] = "{{ item.file_checksum }}"
+            ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/asc"
+            ["validate_certs"] = "{{ item.validate_certs }}"
+        }
+        with_items = new Listing<Mapping> {
+            for(rpm_key in rpm_keys) {
+                new Mapping {
+                    ["file_url"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_url }}"
+                    ["file_checksum"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_checksum }}"
+                    ["validate_certs"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_validate_certs }}"
+                }
+            }
+        }
+    }
+
+    function DownloadRpm(_name: String): tasks_core.AnsibleTaskDefinitionIncludeRole = new tasks_core.AnsibleTaskDefinitionIncludeRole {
+        name = "Download "+_name+" RPM"
+        include_role = new IncludeRole {
+            name = "fetch"
+        }
+        vars = new Mapping<String,unknown> {
+            ["file_url"] = "{{ "+(utils.slugify(_name))+"_rpm_url }}"
+            ["file_checksum"] = "{{ "+(utils.slugify(_name))+"_rpm_checksum }}"
+            ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/rpm"
+            ["validate_certs"] = "{{ "+(utils.slugify(_name))+"_rpm_validate_certs }}"
+        }
+    }
+
+    function DownloadRpms(_name: String, rpm_packages: List<RpmPackage>|Listing<RpmPackage>): tasks_core.AnsibleTaskDefinitionIncludeRole = new tasks_core.AnsibleTaskDefinitionIncludeRole {
+        name = "Download RPMs"
+        include_role = new IncludeRole {
+            name = "fetch"
+        }
+        vars = new Mapping<String,unknown> {
+            ["file_url"] = "{{ item.file_url }}"
+            ["file_checksum"] = "{{ item.file_checksum }}"
+            ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/rpm"
+            ["validate_certs"] = "{{ item.rpm_validate_certs }}"
+        }
+        with_items = new Listing<Mapping> {
+            for(rpm_package in rpm_packages) {
+                new Mapping {
+                    ["file_url"] = "{{ "+utils.slugify(rpm_package.name)+"_rpm_url }}"
+                    ["file_checksum"] = "{{ "+utils.slugify(rpm_package.name)+"_rpm_checksum }}"
+                    ["rpm_validate_certs"] = "{{ "+utils.slugify(rpm_package.name)+"_rpm_validate_certs }}"
+                }
+            }
+        }
+    }
+}

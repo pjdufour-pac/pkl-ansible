@@ -1,0 +1,26 @@
+open module selinux
+
+extends "shell.pkl"
+
+class AnsibleTaskDefinitionSelinuxModule extends AnsibleTaskDefinitionShell {
+    name = "Compile and install extra SELinux policy modules"
+    shell = new Shell {
+        cmd = """
+        bash -c '
+        set -euo pipefail &&
+        cd {{ item | dirname }} &&
+        export SELINUX_MODULE_NAME={{ item | basename | splitext | first }} &&
+        if [[ ! -f "${SELINUX_MODULE_NAME}.mod" ]]; then
+        checkmodule -M -m -o ${SELINUX_MODULE_NAME}.mod ${SELINUX_MODULE_NAME}.te ;
+        fi &&
+        if [[ ! -f "${SELINUX_MODULE_NAME}.pp" ]]; then
+        semodule_package -o ${SELINUX_MODULE_NAME}.pp -m ${SELINUX_MODULE_NAME}.mod ;
+        fi &&
+        semodule -i ${SELINUX_MODULE_NAME}.pp &&
+        semodule -e ${SELINUX_MODULE_NAME}
+        '
+        """.replaceAll("\n", " ")
+    }
+    with_items: Items?
+    `when`: When?
+}

@@ -1,0 +1,171 @@
+open module rpm
+
+extends "base.pkl"
+
+import "@utils/utils.pkl" as utils
+
+// Import modules
+import "../modules.pkl" as modules
+
+// Import factory
+import "../factory.pkl" as mod_factory
+
+// Import tasks
+import "../tasks/io.pkl" as tasks_io
+import "../tasks/selinux.pkl" as tasks_selinux
+import "../tasks/shell.pkl" as tasks_shell
+import "../tasks/yum.pkl" as tasks_yum
+
+class AnsibleRoleDefinitionRpms extends AnsibleRoleDefinition {
+    // Dependency Resolution
+    provides = ((that) -> List(that.name)).apply(this)
+    requires = new Mapping {}
+    //
+    rpm_package_mirror = ""
+    rpm_packages: List<modules.RpmPackage>|Listing<modules.RpmPackage>
+    rpm_key_mirror = ""
+    rpm_keys = new Listing<modules.RpmKey> {}
+    files = new Mapping<String, String>{
+        for (selinux_module_name, selinux_module_content in selinux_extra_modules) {
+            [selinux_module_name+".te"] = selinux_module_content
+        }
+    }
+    templates = new Mapping<String, String>{}
+    defaults = ((that) -> new Mapping<String,unknown> {
+        for(rpm_package in that.rpm_packages) {
+            [utils.slugify(rpm_package.name)+"_rpm_url"] = if(that.rpm_package_mirror != null && that.rpm_package_mirror.length > 0) (that.rpm_package_mirror+"/"+rpm_package.url) else (rpm_package.url)
+            [utils.slugify(rpm_package.name)+"_rpm_checksum"] = rpm_package.checksum
+            [utils.slugify(rpm_package.name)+"_rpm_validate_certs"] = true
+        }
+        when(that.rpm_keys != null) {
+            for(key in that.rpm_keys) {
+                [utils.slugify(key.name)+"_key_url"] = if(that.rpm_key_mirror != null && that.rpm_key_mirror.length > 0) (that.rpm_key_mirror+"/"+key.url) else (key.url)
+                [utils.slugify(key.name)+"_key_checksum"] = key.checksum
+                [utils.slugify(key.name)+"_key_validate_certs"] = true
+            }
+        }
+        [utils.slugify(that.name)+"_state"] = "present"
+        [utils.slugify(that.name)+"_cacheonly"] = false
+        [utils.slugify(that.name)+"_validate_certs"] = true
+        [utils.slugify(that.name)+"_install"] = true
+        when(that.selinux_module.length > 0) {
+            [utils.slugify(that.name)+"_selinux_enable"] = true
+            [utils.slugify(that.name)+"_selinux_module"] = that.selinux_module
+        }
+        when(that.service_names.length > 0) {
+            [utils.slugify(that.name)+"_disabled"] = false
+            when(that.service_socket_files.length > 0) {
+                [utils.slugify(that.name)+"_socket_files"] = that.service_socket_files
+            }
+        }
+        when((firewalld_services != null && firewalld_services.length > 0) || (ufw_ports != null && ufw_ports.length > 0)) {
+            [utils.slugify(name)+"_update_firewall"] = false
+        }
+        for(_key, _value in extra_defaults) {
+            [_key] = _value
+        }
+    }).apply(this)
+    tasks = this.post_tasks.apply(((that) -> new Listing<AnsibleTaskDefinition> {
+        local factory = new mod_factory.Factory {}
+        for(_task in that.pre_tasks) {
+            _task
+        }
+        factory.io.CreateDirectories(new Listing<String> {
+            "/opt/"+ (utils.slugify(that.name))
+            "/opt/"+ (utils.slugify(that.name)) + "/rpm"
+            "/opt/"+ (utils.slugify(that.name)) + "/asc"
+            "/opt/"+ (utils.slugify(that.name)) + "/selinux"
+        })
+        when(that.rpm_keys != null && that.rpm_keys.length == 1) {
+            factory.rpm.DownloadRpmKey(that.name, that.rpm_keys[0])
+            factory.rpm.ImportRpmKey(that.name, that.rpm_keys[0])
+        }
+        when(that.rpm_keys != null && that.rpm_keys.length > 1) {
+            factory.rpm.DownloadRpmKeys(that.name, that.rpm_keys)
+            factory.rpm.ImportRpmKeys(that.name, that.rpm_keys)
+        }
+        factory.rpm.DownloadRpms(that.name, that.rpm_packages)
+        new tasks_shell.AnsibleTaskDefinitionShell {
+            name = "Check signatures of RPMs"
+            shell = new Shell {
+                cmd = "rpm --checksig {{ item }}"
+            }
+            with_items = new Listing<Mapping> {
+                for(rpm_package in that.rpm_packages) {
+                    "/opt/"+ (utils.slugify(that.name)) + "/rpm/{{ "+utils.slugify(rpm_package.name)+"_rpm_url | basename }}"
+                }
+            }
+        }
+        new tasks_yum.AnsibleTaskDefinitionYum {
+            name = "Install "+that.name+" on CentOS"
+            yum = new modules.Yum {
+                name = new Listing {
+                    for(rpm_package in rpm_packages) {
+                        "/opt/"+ (utils.slugify(that.name)) + "/rpm/{{ "+utils.slugify(rpm_package.name)+"_rpm_url | basename }}"
+                    }
+                }
+                state = "{{ "+utils.slugify(that.name)+"_state }}"
+                cacheonly = "{{ "+utils.slugify(that.name)+"_cacheonly }}"
+                validate_certs = "{{ "+utils.slugify(that.name)+"_validate_certs }}"
+            }
+            `when` = utils.slugify(that.name)+"_install and ansible_distribution in [\"CentOS\", \"RedHat\"]"
+        }
+        when(that.selinux_module.length > 0) {
+            factory.selinux.EnableSELinuxPolicyModule(that.name)
+        }
+        when(that.selinux_extra_modules.length > 0) {
+            new tasks_io.AnsibleTaskDefinitionCopy {
+                name = "Copy extra SELinux policy modules"
+                copy = new modules.Copy {
+                    src = "{{ item }}.te"
+                    dest = "/opt/"+ (utils.slugify(that.name)) + "/selinux/{{ item }}.e"
+                    owner = "root"
+                    group = "root"   
+                    mode = "0644"
+                }
+                with_items = new Listing<String> {
+                    for(_name, value in that.selinux_extra_modules) {
+                        _name
+                    }
+                }
+            }
+            new tasks_selinux.AnsibleTaskDefinitionSelinuxModule {
+                with_items = new Listing<String> {
+                    for(_name, value in that.selinux_extra_modules) {
+                       "/opt/"+ (utils.slugify(that.name)) + "/selinux/"+_name+".te"
+                    }
+                }
+            }
+        }
+        when(that.service_names != null && that.service_names.length == 1) {
+            factory.service.StopService(that.name, that.service_names[0])
+            factory.service.DisableService(that.name, that.service_names[0])
+            when(that.service_socket_files != null && that.service_socket_files.length > 0) {
+                factory.io.DeleteSocketFiles(that.name)
+            }
+            factory.service.RestartService(that.name, that.service_names[0])
+            factory.service.EnableService(that.name, that.service_names[0])
+        }
+        when(that.service_names != null && that.service_names.length > 1) {
+            factory.service.StopServices(that.name, that.service_names)
+            factory.service.DisableServices(that.name, that.service_names)
+            when(that.service_socket_files != null && that.service_socket_files.length > 0) {
+                factory.io.DeleteSocketFiles(that.name)
+            }
+            factory.service.RestartServices(that.name, that.service_names)
+            factory.service.EnableServices(that.name, that.service_names)
+        }
+        when(that.firewalld_services != null && that.firewalld_services.length == 1) {
+            factory.firewalld.AllowService(that.name, that.firewalld_services[0])
+        }
+        when(that.firewalld_services != null && that.firewalld_services.length > 1) {
+            factory.firewalld.AllowService(that.name, that.firewalld_services)
+        }
+        when(that.ufw_ports != null && that.ufw_ports.length == 1) {
+            factory.ufw.AllowPort(that.name, that.ufw_ports[0])
+        }
+        when(that.ufw_ports != null && that.ufw_ports.length > 1) {
+            factory.ufw.AllowPorts(that.name, that.ufw_ports)
+        }
+    }).apply(this))
+}

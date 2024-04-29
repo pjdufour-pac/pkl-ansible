@@ -1,0 +1,27 @@
+open module ufw
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/shell.pkl" as tasks_shell
+
+class FactoryUfw {
+
+    function AllowPort(_name: String, port: String): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Allow service through the firewall (Ubuntu)"
+        shell = new Shell {
+            cmd = "ufw allow "+port
+        }
+        `when` = utils.slugify(_name)+"_update_firewall and ansible_distribution in [\"Ubuntu\"]"
+    }
+
+    function AllowPors(_name: String, ports: List<String>): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Allow ports through the firewall (Ubuntu)"
+        shell = new Shell {
+            cmd = "ufw allow {{ item }}"
+        }
+        with_items = ports
+        `when` = utils.slugify(_name)+"_update_firewall and ansible_distribution in [\"Ubuntu\"]"
+    }
+}

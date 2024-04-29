@@ -1,0 +1,12 @@
+open module types
+
+open class TemplateFile {
+    name: String
+    content: String
+    path: String
+    owner: String
+    group: String
+    mode: String
+}
+
+typealias PackageNames = String|List<String>|Listing<String>

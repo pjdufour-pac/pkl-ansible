@@ -1,0 +1,11 @@
+open module os
+
+extends "become.pkl"
+
+class AnsibleTaskDefinitionUser extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    user: User
+    with_items: Items?
+    `when`: When?
+}

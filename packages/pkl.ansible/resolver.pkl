@@ -1,0 +1,162 @@
+open module providers
+
+extends "playbooks.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "tasks/base.pkl" as tasks_base
+
+import "roles/base.pkl" as roles_base
+import "roles/package.pkl" as roles_package
+import "roles/packages.pkl" as roles_packages
+import "roles/rpm.pkl" as roles_rpm
+import "roles/rpms.pkl" as roles_rpms
+
+open class Resolver {
+
+  ansible_distribution = ""
+  yum_repo_enabled = false
+  epel_release_enabled = false
+  apt_repo_enabled = false
+
+  // CheckRole returns true if the role can be used in the given context
+  function CheckRole(role: roles_base.AnsibleRoleDefinition): Boolean =
+    let (that = this)
+    if (that.ansible_distribution == "CentOS" || that.ansible_distribution == "RedHat")
+      if (that.yum_repo_enabled)
+        (role is roles_package.AnsibleRoleDefinitionPackage) ||
+        (role is roles_packages.AnsibleRoleDefinitionPackages) ||
+        (role is roles_rpm.AnsibleRoleDefinitionRpm) ||
+        (role is roles_rpms.AnsibleRoleDefinitionRpms)
+      else
+        (role is roles_rpm.AnsibleRoleDefinitionRpm) || (role is roles_rpms.AnsibleRoleDefinitionRpms)      
+    else
+      (role is roles_package.AnsibleRoleDefinitionPackage) || (role is roles_packages.AnsibleRoleDefinitionPackages)
+
+  // GetRoles returns all the roles that are valid for the given context
+  function FilterRoles(roles: Map<String, roles_base.AnsibleRoleDefinition>): Map<String, roles_base.AnsibleRoleDefinition> =
+    let (that = this) roles.filter((k, v) -> CheckRole(v))
+
+  // Map of role names to the capabilities they provide
+  function MapRolesToCapabilities(roles: Map<String, roles_base.AnsibleRoleDefinition>): Map<String, List<String>> =
+    roles.fold(Map(), (acc, k, v) -> acc.put(k, v.provides))
+
+  // Map of capability name to the roles that provide that capability
+  function MapCapabilitiesToRoles(roles: Map<String, roles_base.AnsibleRoleDefinition>): Map<String, List<String>> = roles.entries
+    .fold(Map(), (result, entry) -> result + entry.value.provides.fold(Map(), (acc, c) -> acc.put(c, List())))
+    .mapValues(
+      (k1, v1) -> roles
+        .filter((k2, v2) -> v2.provides.contains(k1))
+        .keys
+        .sortWith((a, b) -> (a is roles_package.AnsibleRoleDefinitionPackage) || (a is roles_packages.AnsibleRoleDefinitionPackages))
+    )
+
+  // MapCapabilitiesToPreferredRole returns the preferred role for each capability
+  function MapCapabilitiesToPreferredRole(roles: Map<String, roles_base.AnsibleRoleDefinition>): Map<String, String> =
+    roles.entries
+    .fold(Map(), (result, entry) -> result + entry.value.provides.fold(Map(), (acc, c) -> acc.put(c, List())))
+    .mapValues(
+      (k1, v1) -> roles
+        .filter((k2, v2) -> v2.provides.contains(k1))
+        .keys
+        .sortWith((a, b) -> (a is roles_package.AnsibleRoleDefinitionPackage) || (a is roles_packages.AnsibleRoleDefinitionPackages))
+        .first
+    )
+  
+  // Return Map of resolved dependencies for each roles
+  function MapRolesToDependencies(roles: Map<String, roles_base.AnsibleRoleDefinition>): Map<String, List<String>> =
+    let (
+      filtered = this.FilterRoles(roles)
+    )
+    let (
+      preferred = this.MapCapabilitiesToPreferredRole(filtered)
+    )
+    filtered
+    .mapValues((k, v) ->
+      (v.requires.getOrNull(ansible_distribution) ?? new Listing {})
+      .toList()
+      .map((x) -> preferred.getOrNull(x) ?? "!"+x)
+    )
+
+  function CompactRoles(
+    roles: List<AnsiblePlaybookRole>
+  ): List<AnsiblePlaybookRole|String> = roles.map((role) -> role.compact())
+
+  function GetTasksForNames(
+    names: List<String>,
+    definitions: Map<String, tasks_base.AnsibleTaskDefinition>
+  ): List<tasks_base.AnsibleTaskDefinition> = names.map((name) -> definitions[name])
+
+  function GetNamesForRoles(
+    names: List<String>,
+    definitions: Map<String, AnsiblePlaybookRole>
+  ): List<AnsiblePlaybookRole> = names.map((name) -> definitions[name])
+
+  function ExpandRole(
+    name: String,
+    dependencies: Map<String,  Function1|List<String>>,
+    env: Map<String,String>
+  ): List =
+    let (that = this)
+    if (name == null) (
+      List()
+    ) else (
+      if(dependencies.containsKey(name))
+        that.ExpandRoles(
+          (if(dependencies[name] is Function1) dependencies[name].apply(env) else dependencies[name]), dependencies, env
+        ) +
+        List(name)
+      else (
+        List(name)
+      )
+    )
+
+  function ExpandRoles(
+    names: List<String>,
+    dependencies: Map<String, Function1|List<String>>,
+    env: Map<String,String>
+  ): List = let (that = this) names.map((name) -> that.ExpandRole(name, dependencies, env))
+
+  function GetRoleForCapability(
+    names: List<String>,
+    roles: Map<String, roles_base.AnsibleRoleDefinition>
+  ): List<String> =
+    this.MapCapabilitiesToPreferredRole(this.FilterRoles(roles)).getOrNull(name)
+
+  function GetRolesForCapabilities(
+    names: List<String>,
+    roles: Map<String, roles_base.AnsibleRoleDefinition>
+  ): List<String> =
+    let (
+      preferred = this.MapCapabilitiesToPreferredRole(this.FilterRoles(roles))
+    )
+    names.map((name) -> preferred[name])
+
+  function RenderRoles(
+      names: List<String>,
+      role_definitions: Map<String, roles_base.AnsibleRoleDefinition>,
+      role_references: Map<String,AnsiblePlaybookRole>,
+      dependencies: Map<String, Function1|List<String>>,
+      env: Map<String,String>): List<String|AnsiblePlaybookRole> =
+      let (that = this)
+      let (
+        all_dependencies = dependencies.toMap() + that.MapRolesToDependencies(role_definitions)
+      )
+      that.CompactRoles(
+        that.GetNamesForRoles(
+          utils.distinct(
+            utils.flatten(
+              that.ExpandRoles(names, all_dependencies, env)
+            )
+          ),
+          role_references
+        )
+      )
+}
+
+function NewResolver(ansible_distribution: String, yum_repo_enabled: Boolean, epel_release_enabled: Boolean): Resolver
+  = new Mapping {
+    ["ansible_distribution"] = ansible_distribution
+    ["yum_repo_enabled"] = yum_repo_enabled
+    ["epel_release_enabled"] = epel_release_enabled
+  }.toMap().toTyped(Resolver)

@@ -1,0 +1,15 @@
+extends "playbooks.pkl"
+
+import "@utils/utils.pkl" as utils
+
+// function expand_role(name: String, dependencies: Mapping<String,  Function1|List<String>>, env: Mapping<String,String>): List = if (name == null) List() else (if(dependencies.containsKey(name)) expand_roles((if(dependencies[name] is Function1) dependencies[name].apply(env) else dependencies[name]), dependencies, env) + List(name) else List(name))
+
+// function expand_roles(names: List<String>, dependencies: Mapping<String, Function1|List<String>>, env: Mapping<String,String>): List = names.map((name) -> expand_role(name, dependencies, env))
+
+// function resolve_roles(names: List<String>, definitions: Mapping<String, AnsiblePlaybookRole>): List<AnsiblePlaybookRole> = names.map((name) -> definitions[name])
+
+// function resolve_tasks(names: List<String>, definitions: Mapping<String, AnsibleTaskDefinition>): List<AnsibleTaskDefinition> = names.map((name) -> definitions[name])
+
+// function compact_roles(roles: List<AnsiblePlaybookRole>): List<AnsiblePlaybookRole|String> = roles.map((role) -> role.compact())
+
+//function render_roles(names: List<String>, definitions: Mapping<String,AnsiblePlaybookRole>, dependencies: Mapping<String, Function1|List<String>>, env: Mapping<String,String>): List<String|AnsiblePlaybookRole> =  compact_roles(resolve_roles(utils.distinct(utils.flatten(expand_roles(names, dependencies, env))), definitions))

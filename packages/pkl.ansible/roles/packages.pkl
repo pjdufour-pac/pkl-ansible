@@ -1,0 +1,125 @@
+open module packages
+
+extends "base.pkl"
+
+import "@utils/utils.pkl" as utils
+
+// Import factory
+import "../factory.pkl" as mod_factory
+
+// Import tasks
+import "../tasks/apt.pkl" as task_apt
+
+typealias AptKeys = List<String>
+
+typealias AptRepos = List<String>
+
+typealias AptPackages = String|List<String>|Listing<String>
+
+typealias YumPackages = String|List<String>|Listing<String>
+
+class AnsibleRoleDefinitionPackages extends AnsibleRoleDefinition {
+    // Dependency Resolution
+    provides = ((that) -> List(that.name)).apply(this)
+    requires = new Mapping {}
+    //
+    apt_packages: AptPackages = List()
+    apt_repos: AptRepos = List()
+    apt_keys: AptKeys = List()
+    apt_sources: Mapping<String,String> = new Mapping<String,String> {}
+    yum_packages: YumPackages = List()
+    defaults = new Mapping<String,unknown> {
+        [utils.slugify(name)+"_state"] = "latest"
+        [utils.slugify(name)+"_cacheonly"] = false
+        [utils.slugify(name)+"_validate_certs"] = true
+        [utils.slugify(name)+"_install"] = true
+        when(service_names.length > 0) {
+            [utils.slugify(name)+"_disabled"] = false
+        }
+        when((firewalld_services != null && firewalld_services.length > 0) || (ufw_ports != null && ufw_ports.length > 0)) {
+            [utils.slugify(name)+"_update_firewall"] = false
+        }
+        for(_key, _value in extra_defaults) {
+            [_key] = _value
+        }
+    }
+    tasks = this.post_tasks.apply(((that) -> new Listing<AnsibleTaskDefinition> {
+        local factory = new mod_factory.Factory {}
+        for(_task in that.pre_tasks) {
+            _task
+        }
+        when(that.yum_packages.length > 0) {
+            factory.yum.InstallYumPackages(that.name, that.yum_packages)
+        }
+        when(that.apt_keys != null && that.apt_keys.length > 0) {
+            factory.apt.InstallAptKeys(that.apt_keys)
+        }
+        when(that.apt_sources != null && that.apt_sources.length > 0) {
+            new task_apt.AnsibleTaskDefinitionAptSource {
+                name = "Add APT sources on Ubuntu"
+                copy = new Copy {
+                    dest = "{{ item.dest }}"
+                    owner = "root"
+                    group = "root"
+                    mode = "0644"
+                    content = "{{ item.content }}"
+                }
+                `when` = "ansible_distribution in [\"Ubuntu\"]"
+                with_items = that.apt_sources.toMap().entries.map((source) -> new Mapping<String,String> {
+                    ["dest"] = "/etc/apt/sources.list.d/"+source.key+".list"
+                    ["content"] = source.value
+                })
+            }
+        }
+        when(that.apt_repos != null && that.apt_repos.length > 0) {
+            factory.apt.InstallAptRepos(that.apt_repos)
+        }
+        when((that.apt_repos != null && that.apt_repos.length > 0) || (that.apt_sources != null && that.apt_sources.length > 0)) {
+            factory.apt.UpdateAptCache()
+        }
+        when(that.apt_packages.length > 0) {
+            factory.apt.InstallAptPackages(that.name, that.apt_packages)
+        }
+        when(that.service_names != null && that.service_names.length == 1) {
+            factory.service.StopService(that.name, that.service_names[0])
+            factory.service.DisableService(that.name, that.service_names[0])
+            factory.service.RestartService(that.name, that.service_names[0])
+            factory.service.EnableService(that.name, that.service_names[0])
+        }
+        when(that.service_names != null && that.service_names.length > 1) {
+            factory.service.StopServices(that.name, that.service_names)
+            factory.service.DisableServices(that.name, that.service_names)
+            factory.service.RestartServices(that.name, that.service_names)
+            factory.service.EnableServices(that.name, that.service_names)
+        }
+        when(that.firewalld_services != null && that.firewalld_services.length == 1) {
+            factory.firewalld.AllowService(that.name, that.firewalld_services[0])
+        }
+        when(that.firewalld_services != null && that.firewalld_services.length > 1) {
+            factory.firewalld.AllowService(that.name, that.firewalld_services)
+        }
+        when(that.ufw_ports != null && that.ufw_ports.length == 1) {
+            factory.ufw.AllowPort(that.name, that.ufw_ports[0])
+        }
+        when(that.ufw_ports != null && that.ufw_ports.length > 1) {
+            factory.ufw.AllowPorts(that.name, that.ufw_ports)
+        }
+    }).apply(this))
+}
+
+function NewAnsibleRoleDefinitionPackages(_name: String, _apt_packages: List<String>|Listing<String>|String, _yum_packages: List<String>|Listing<String>|String): AnsibleRoleDefinitionPackages =
+    new AnsibleRoleDefinitionPackages {
+        name = _name
+        apt_packages = _apt_packages
+        yum_packages = _yum_packages
+    }
+
+function NewAnsibleRoleDefinitionPackagesOptions(_name: String, _apt_packages: List<String>|Listing<String>|String, _yum_packages: List<String>|Listing<String>|String, options: Mapping<String,unknown>): AnsibleRoleDefinitionPackages =
+    (
+        new AnsibleRoleDefinitionPackages {
+            name = _name
+            apt_packages = _apt_packages
+            yum_packages = _yum_packages
+        }.toMap() +
+        options.toMap()
+    ).toTyped(AnsibleRoleDefinitionPackages)

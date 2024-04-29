@@ -1,0 +1,38 @@
+open module apt
+
+extends "become.pkl"
+
+open class AnsibleTaskDefinitionApt extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    apt: Apt
+    `when`: When?
+}
+
+class AnsibleTaskDefinitionDebconf extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    debconf: String
+    `when`: When?
+}
+
+open class AnsibleTaskDefinitionAptKey extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    apt_key: AptKey
+    `when`: When?
+}
+
+open class AnsibleTaskDefinitionAptRepository extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    apt_repository: AptRepository
+    `when`: When?
+}
+
+open class AnsibleTaskDefinitionAptSource extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    copy: Copy
+    `when`: When?
+}

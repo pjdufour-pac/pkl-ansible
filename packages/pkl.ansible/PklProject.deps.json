@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "resolvedDependencies": {
+    "package://github.com/pjdufour-pac/pkl-packages/packages/pkl.utils@1": {
+      "type": "local",
+      "uri": "projectpackage://github.com/pjdufour-pac/pkl-packages/packages/pkl.utils@1.0.0",
+      "path": "../pkl.utils"
+    }
+  }
+}

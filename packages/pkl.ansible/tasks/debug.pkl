@@ -1,0 +1,8 @@
+
+open module debug
+
+extends "base.pkl"
+
+class AnsibleTaskDefinitionDebug extends AnsibleTaskDefinition {
+    debug: Debug
+}

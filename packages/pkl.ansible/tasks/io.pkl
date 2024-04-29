@@ -1,0 +1,44 @@
+open module io
+
+extends "become.pkl"
+
+class AnsibleTaskDefinitionCopy extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    copy: Copy
+    with_items: Items?
+}
+
+class AnsibleTaskDefinitionFile extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    file: File
+}
+
+class AnsibleTaskDefinitionDirectories extends AnsibleTaskDefinitionBecome {
+    name = "Create directories"
+    become = true
+    become_user = "root"
+    fixed file = new File {
+        path = "{{ item }}"
+        state = "directory"
+        mode = "0755"
+        owner = "root"
+        group = "root"
+    }
+    with_items: Items?
+}
+
+class AnsibleTaskDefinitionLineInFile extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    lineinfile: LineInFile
+}
+
+class AnsibleTaskDefinitionTemplate extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    template: Template
+    with_items: Items?
+    `when`: When?
+}

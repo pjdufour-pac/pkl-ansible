@@ -1,0 +1,17 @@
+open module base
+
+extends "../modules.pkl"
+
+typealias Items = String|List<String>|Listing<String>|List<Mapping>|Listing<Mapping>
+
+abstract class AnsibleTaskDefinition {
+    name: String
+    with_items: Items?
+    register: String?
+    //fixed `when`: When?
+}
+
+abstract class AnsibleTaskDefinitionBecome extends AnsibleTaskDefinition {
+    become: When?
+    become_user: String?
+}

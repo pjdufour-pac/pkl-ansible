@@ -10,8 +10,29 @@ amends "pkl:test"
 
 import "../utils.pkl"
 
-local world = utils.basename("world.txt")
-
-local hello_world = utils.basename("hello/world.txt")
-
-local hello_beautiful_world = utils.basename("hello/beautiful/world.txt")
+facts {
+  ["basename"] {
+    utils.basename("world.txt") == "world.txt"
+    utils.basename("hello/world.txt") == "world.txt"
+    utils.basename("hello/beautiful/world.txt") == "world.txt"
+  }
+  ["distinct"] {
+    utils.distinct(List("a")) == List("a")
+    utils.distinct(List("a", "b")) == List("a", "b")
+    utils.distinct(List("a", "b", "a")) == List("a", "b")
+  }
+  ["flatten"] {
+    utils.flatten(List("a")) == List("a")
+    utils.flatten(List("a", "b")) == List("a", "b")
+    utils.flatten(List("a", "b", List("c"))) == List("a", "b", "c")
+  }
+  ["slugify"] {
+    utils.slugify("a") == "a"
+    utils.slugify("a.b") == "a_b"
+    utils.slugify("+") == "plus"
+    utils.slugify("+a") == "plus_a"
+    utils.slugify("a+") == "a_plus"
+    utils.slugify("a+b") == "a_plus_b"
+    utils.slugify("a++") == "a_plus_plus"
+  }
+}

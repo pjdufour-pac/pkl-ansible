@@ -1,0 +1,118 @@
+open module rpm
+
+extends "base.pkl"
+
+import "@utils/utils.pkl" as utils
+
+// Import modules
+import "../modules.pkl" as modules
+
+// Import factory
+import "../factory.pkl" as mod_factory
+
+// Import tasks
+import "../tasks/base.pkl" as tasks_base
+import "../tasks/shell.pkl" as tasks_shell
+import "../tasks/yum.pkl" as tasks_yum
+
+class AnsibleRoleDefinitionRpm extends AnsibleRoleDefinition {
+    // Dependency Resolution
+    provides = ((that) -> List(that.name)).apply(this)
+    requires = new Mapping {}
+    //
+    mirror: String
+    url: String
+    checksum: String
+    rpm_key_mirror = ""
+    rpm_keys = new Listing<RpmKey> {}
+    templates = new Mapping<String,String>{}
+    defaults = ((that) -> new Mapping<String,unknown> {
+        [utils.slugify(name)+"_rpm_url"] = if(mirror != null && mirror.length > 0) (mirror+"/"+url) else (url)
+        [utils.slugify(name)+"_rpm_checksum"] = checksum
+        [utils.slugify(name)+"_rpm_validate_certs"] = true
+        [utils.slugify(name)+"_state"] = "present"
+        [utils.slugify(name)+"_cacheonly"] = false
+        [utils.slugify(name)+"_validate_certs"] = true
+        [utils.slugify(name)+"_install"] = true
+        when(that.rpm_keys != null) {
+            for(key in that.rpm_keys) {
+                [utils.slugify(key.name)+"_key_url"] = if(that.rpm_key_mirror != null && that.rpm_key_mirror.length > 0) (that.rpm_key_mirror+"/"+key.url) else (key.url)
+                [utils.slugify(key.name)+"_key_checksum"] = key.checksum
+                [utils.slugify(key.name)+"_key_validate_certs"] = true
+            }
+        }
+        when(that.selinux_module.length > 0) {
+            [utils.slugify(name)+"_selinux_enable"] = true
+            [utils.slugify(name)+"_selinux_module"] = that.selinux_module
+        }
+        when(service_names.length > 0) {
+            [utils.slugify(name)+"_disabled"] = false
+            when(that.service_socket_files.length > 0) {
+                [utils.slugify(name)+"_socket_files"] = that.service_socket_files
+            }
+        }
+        when((firewalld_services != null && firewalld_services.length > 0) || (ufw_ports != null && ufw_ports.length > 0)) {
+            [utils.slugify(name)+"_update_firewall"] = false
+        }
+        for(_key, _value in extra_defaults) {
+            [_key] = _value
+        }
+    }).apply(this)
+    tasks = this.post_tasks.apply(((that) -> new Listing<tasks_base.AnsibleTaskDefinition> {
+        local factory = new mod_factory.Factory {}
+        for(_task in that.pre_tasks) {
+            _task
+        }
+        factory.io.CreateDirectories(new Listing<String> {
+            "/opt/"+ (utils.slugify(that.name))
+            "/opt/"+ (utils.slugify(that.name)) + "/rpm"
+        })
+        when(that.rpm_keys != null && that.rpm_keys.length == 1) {
+            factory.rpm.DownloadRpmKey(that.name, that.rpm_keys[0])
+            factory.rpm.ImportRpmKey(that.name, that.rpm_keys[0])
+        }
+        when(that.rpm_keys != null && that.rpm_keys.length > 1) {
+            factory.rpm.DownloadRpmKeys(that.name, that.rpm_keys)
+           factory.rpm.ImportRpmKeys(that.name, that.rpm_keys)
+        }
+        factory.rpm.DownloadRpm(that.name)
+        new tasks_shell.AnsibleTaskDefinitionShell {
+            name = "Check signature of "+that.name+" RPM"
+            shell = "rpm --checksig /opt/"+(utils.slugify(that.name))+"/rpm/{{ "+(utils.slugify(that.name))+"_rpm_url | basename }}"
+        }
+        new tasks_yum.AnsibleTaskDefinitionYum {
+            name = "Install "+that.name+" on CentOS"
+            yum = new modules.Yum {
+                name = "/opt/"+(utils.slugify(that.name))+"/rpm/{{ "+(utils.slugify(that.name))+"_rpm_url | basename }}"
+                state = "{{ "+utils.slugify(that.name)+"_state }}"
+                cacheonly = "{{ "+utils.slugify(that.name)+"_cacheonly }}"
+                validate_certs = "{{ "+utils.slugify(that.name)+"_validate_certs }}"
+            }
+            `when` = utils.slugify(that.name)+"_install and ansible_distribution in [\"CentOS\", \"RedHat\"]"
+        }
+        when(that.service_names != null && that.service_names.length == 1) {
+            factory.service.StopService(that.name, that.service_names[0])
+            factory.service.DisableService(that.name, that.service_names[0])
+            factory.service.RestartService(that.name, that.service_names[0])
+            factory.service.EnableService(that.name, that.service_names[0])
+        }
+        when(that.service_names != null && that.service_names.length > 1) {
+            factory.service.StopServices(that.name, that.service_names)
+            factory.service.DisableServices(that.name, that.service_names)
+            factory.service.RestartServices(that.name, that.service_names)
+            factory.service.EnableServices(that.name, that.service_names)
+        }
+        when(that.firewalld_services != null && that.firewalld_services.length == 1) {
+            factory.firewalld.AllowService(that.name, that.firewalld_services[0])
+        }
+        when(that.firewalld_services != null && that.firewalld_services.length > 1) {
+            factory.firewalld.AllowService(that.name, that.firewalld_services)
+        }
+        when(that.ufw_ports != null && that.ufw_ports.length == 1) {
+            factory.ufw.AllowPort(that.name, that.ufw_ports[0])
+        }
+        when(that.ufw_ports != null && that.ufw_ports.length > 1) {
+            factory.ufw.AllowPorts(that.name, that.ufw_ports)
+        }
+    }).apply(this))
+}

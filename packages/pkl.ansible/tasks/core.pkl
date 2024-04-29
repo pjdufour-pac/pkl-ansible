@@ -1,0 +1,10 @@
+open module core
+
+extends "base.pkl"
+
+typealias AnsibleVars = Mapping<String,unknown>
+
+class AnsibleTaskDefinitionIncludeRole extends AnsibleTaskDefinition {
+    include_role: IncludeRole
+    vars: AnsibleVars?
+}

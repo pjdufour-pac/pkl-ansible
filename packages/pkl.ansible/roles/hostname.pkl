@@ -1,0 +1,21 @@
+open module hostname
+
+extends "base.pkl"
+
+import "../tasks/net.pkl" as net
+
+class AnsibleRoleDefinitionHostname extends AnsibleRoleDefinition {
+    defaults = new Mapping<String,unknown> {
+        ["hostname"] = ""
+    }
+    tasks = new Listing<AnsibleTaskDefinition> {
+        new net.AnsibleTaskDefinitionHostname {
+            name = "Set hostname"
+            hostname = new Hostname {
+                name = "{{ hostname }}"
+            }
+        }
+    }
+}
+
+function NewAnsibleRoleDefinitionHostname(name: String): AnsibleRoleDefinitionHostname = new Mapping { ["name"] = name }.toMap().toTyped(AnsibleRoleDefinitionHostname)

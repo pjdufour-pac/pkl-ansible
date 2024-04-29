@@ -27,7 +27,7 @@ local allTests = import*("**/tests/**.pkl").keys.filter((it) -> !it.contains("te
 package {
   name = packageName
   apiTests = tests // api tests are shared with module tests
-  baseUri = "package://github.com/pjdufour-pac/pkl-packages/\(name)"
+  baseUri = "package://github.com/pjdufour-pac/pkl-packages/packages/\(name)"
   packageZipUrl = "https://github.com/pjdufour-pac/pkl-packages/releases/download/\(name)@\(version)/\(name)@\(version).zip"
   license = "Apache-2.0"
   authors {

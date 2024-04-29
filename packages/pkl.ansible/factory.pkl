@@ -1,0 +1,32 @@
+open module factory
+
+extends "modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "factory/apt.pkl" as apt
+import "factory/firewalld.pkl" as firewalld
+import "factory/io.pkl" as io
+import "factory/os.pkl" as os
+import "factory/rpm.pkl" as rpm
+import "factory/selinux.pkl" as selinux
+import "factory/service.pkl" as service
+import "factory/time.pkl" as time
+import "factory/ufw.pkl" as ufw
+import "factory/yum.pkl" as yum
+
+class Factory {
+
+    apt = new apt.FactoryApt {}
+    firewalld = new firewalld.FactoryFirewallD {}
+    io = new io.FactoryIo {}
+    os = new os.FactoryOs {}
+    rpm = new rpm.FactoryRpm {}
+    selinux = new selinux.FactorySelinux {}
+    service = new service.FactoryService {}
+    time = new time.FactoryTime {}
+    ufw = new ufw.FactoryUfw {}
+    yum = new yum.FactoryYum {}
+}
+
+factory = new Factory {}

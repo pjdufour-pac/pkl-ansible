@@ -1,0 +1,27 @@
+open module io
+
+extends "../modules.pkl"
+
+import "../tasks/shell.pkl" as tasks_shell
+
+class FactoryOs {
+
+    function RemoveUsersFromCentOS(users: List<String>|Listing<String>, force: Boolean): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Remove users"
+        shell = "userdel -r {{ item }}"
+        with_items = users
+        when (force) {
+            failed_when = false
+        }
+    }
+
+    function RemoveUsersFromUbuntu(users: List<String>|Listing<String>, force: Boolean): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Remove users"
+        shell = "deluser --remove-home {{ item }}"
+        with_items = users
+        when (force) {
+            failed_when = false
+        }
+    }
+
+}

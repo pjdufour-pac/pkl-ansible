@@ -8,6 +8,7 @@
 # =================================================================
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly DIR
 
 set -euo pipefail
 
@@ -17,30 +18,22 @@ if ! command -v pkl > /dev/null; then
 fi
 
 function usage() {
-  echo "Usage: ${0##*/} INPUT_DIR"
+  echo "Usage: ${0##*/}"
   exit 1
 }
 
-if [[ $# -ne 1 ]]; then
+if [[ $# -ne 0 ]]; then
   usage
 fi
 
-input_dir=$1
+ca_certificates=$(realpath "${DIR}/../pem/github.com.pem")
 
-pushd "${input_dir}"
+echo "${ca_certificates}"
 
-testfiles=($(find . -name '*_test.pkl'))
-
-for testfile in "${testfiles[@]}"; do
-  if [[ "${testfile}" == "" ]]; then
-    continue
+for package in ${DIR}/../packages/*; do
+  if [ -d "${package}" ] && [ -f "${package}/PklProject" ] && [ -d "${package}/tests" ]; then
+    pushd "${package}/tests" > /dev/null
+    pkl test --ca-certificates "${ca_certificates}"
+    popd > /dev/null
   fi
-  echo "Testing ${testfile}"
-  if ! pkl eval "${testfile}" 1> /dev/null ; then
-    exit 1
-  fi
-  echo "Test complete"
-  echo "----------------------------------------------------------------------"
 done
-
-popd

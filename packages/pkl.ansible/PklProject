@@ -1,0 +1,16 @@
+// =================================================================
+//
+// Work of the U.S. Department of the Navy, NIWC Pacific.
+// Released as open source under the MIT License.  See LICENSE file.
+//
+// =================================================================
+/// A set of utility functions.
+amends "../basePklProject.pkl"
+
+dependencies {
+  ["utils"] = import("../pkl.utils/PklProject")
+}
+
+package {
+  version = "1.0.0"
+}

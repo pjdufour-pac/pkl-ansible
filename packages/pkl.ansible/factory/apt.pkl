@@ -1,0 +1,55 @@
+open module apt
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/apt.pkl" as tasks_apt
+
+class FactoryApt {
+    function UpdateAptCache(): tasks_apt.AnsibleTaskDefinitionApt = new tasks_apt.AnsibleTaskDefinitionApt {
+        name = "Update APT cache"
+        apt = new Apt {
+            update_cache = true
+        }
+        `when` = "ansible_distribution in [\"Ubuntu\"]"
+    }
+
+    function InstallAptRepos(apt_repos: List<String>|Listing<String>): tasks_apt.AnsibleTaskDefinitionAptRepository = new tasks_apt.AnsibleTaskDefinitionAptRepository {
+        name = "Add APT repositories on Ubuntu"
+        apt_repository = new AptRepository {
+            repo = "{{ item }}"
+            install_python_apt = false
+            update_cache = true
+        }
+        `when` = "ansible_distribution in [\"Ubuntu\"]"
+        with_items = apt_repos
+    }
+
+    function InstallAptPackage(_name: String): tasks_apt.AnsibleTaskDefinitionApt = new tasks_apt.AnsibleTaskDefinitionApt {
+        name = "Install "+_name+" on Ubuntu"
+        apt = new Apt {
+            name = _name
+            state = "{{ "+(utils.slugify(_name))+"_state }}"
+        }
+        `when` = (utils.slugify(_name))+"_install and ansible_distribution in [\"Ubuntu\"]"
+    }
+
+    function InstallAptPackages(_name: String, apt_packages: String|List<String>|Listing<String>): tasks_apt.AnsibleTaskDefinitionApt = new tasks_apt.AnsibleTaskDefinitionApt {
+        name = "Install "+_name+" on Ubuntu"
+        apt = new Apt {
+            name = apt_packages
+            state = "{{ "+(utils.slugify(_name))+"_state }}"
+        }
+        `when` = (utils.slugify(_name))+"_install and ansible_distribution in [\"Ubuntu\"]"
+    }
+
+    function InstallAptKeys(apt_keys: List<String>|Listing<String>): tasks_apt.AnsibleTaskDefinitionAptKey = new tasks_apt.AnsibleTaskDefinitionAptKey {
+        name = "Add APT keys on Ubuntu"
+        apt_key = new AptKey {
+            url = "{{ item }}"
+        }
+        `when` = "ansible_distribution in [\"Ubuntu\"]"
+        with_items = apt_keys
+    }
+}

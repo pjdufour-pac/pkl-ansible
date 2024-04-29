@@ -1,0 +1,23 @@
+open module playbooks
+
+import "tasks/base.pkl" as base
+
+typealias AnsiblePlaybookEnvironment = Mapping<String,String>|Map<String,String>
+
+typealias AnsiblePlaybookPreTasks = Listing<base.AnsibleTaskDefinition>|List<base.AnsibleTaskDefinition>
+
+class AnsiblePlaybookRole {
+    role: String
+    vars: Mapping<String,unknown>?
+    `when`: base.When?
+
+    function compact(): AnsiblePlaybookRole|String = if((this.`when` == null || this.`when`.isEmpty) && (this.vars == null || this.vars.isEmpty)) this.role else this
+}
+
+class AnsiblePlaybook {
+    name: String
+    hosts: String = "all"
+    environment: AnsiblePlaybookEnvironment? = null
+    pre_tasks: AnsiblePlaybookPreTasks? = null
+    roles: Listing<AnsiblePlaybookRole|String>|List<AnsiblePlaybookRole|String> = null
+}

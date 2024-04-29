@@ -1,0 +1,122 @@
+/// A collection of Ansible modules as Pkl classes.
+///
+/// <https://docs.ansible.com/ansible/latest/collections/ansible/builtin/index.html>
+open module modules
+
+extends "types.pkl"
+
+typealias When = Boolean|String
+
+typealias State = "reloaded"|"restarted"|"started"|"stopped"
+
+typealias Name = String|List<String>
+
+typealias Repo = String
+
+typealias Checksum = String(length == 71 && startsWith("sha256:"))
+
+class Apt {
+    name: Name?
+    state: String?
+    update_cache: When?
+}
+
+class AptKey {
+    url: String
+}
+
+class AptRepository {
+    repo: Repo
+    install_python_apt: When
+    update_cache: When?
+}
+
+class Debug {
+    var: String
+}
+
+class Copy {
+    src: String?
+    dest: String
+    owner: String
+    group: String
+    mode: String
+    content: String?
+}
+
+class File {
+    path: String
+    state: String
+    mode: String
+    owner: String
+    group: String
+}
+
+class Hostname {
+    name: String
+}
+
+class IncludeRole {
+    name: String
+}
+
+class LineInFile {
+    dest: String
+    regexp: String
+    line: String
+    state: String
+    create: When
+    owner: String
+    group: String
+    mode: String
+}
+
+class RpmPackage {
+    name: String
+    url: String
+    checksum: Checksum
+}
+
+class RpmKey {
+    name: String
+    filename: String
+    url: String
+    checksum: Checksum
+}
+
+class Service {
+    name: String
+    state: State?
+    enabled: When?
+}
+
+class Shell {
+    chdir: String?
+    cmd: String
+    creates: String?
+    removes: String?
+}
+
+class Template {
+    src: String
+    dest: String
+    owner: String
+    group: String
+    mode: String
+}
+
+class User {
+    name: String
+    append: Boolean = true
+    groups: Name
+}
+
+/// Installing packages using the YUM package manager
+///
+/// <https://docs.ansible.com/ansible/latest/collections/ansible/builtin/yum_module.html>
+class Yum {
+    name: String|List<String>|Listing<String>
+    state: String
+    cacheonly: When?
+    validate_certs: When?
+}

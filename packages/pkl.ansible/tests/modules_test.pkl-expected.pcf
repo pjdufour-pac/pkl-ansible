@@ -1,0 +1,38 @@
+examples {
+  ["apt"] {
+    new {
+      name = "jq"
+      state = "latest"
+      update_cache = false
+    }
+    new {
+      url = "https://www.mongodb.org/static/pgp/server-7.0.asc"
+    }
+    new {
+      repo = "ppa:ansible/ansible"
+      install_python_apt = false
+      update_cache = true
+    }
+  }
+  ["rpm"] {
+    new {
+      name = "firewalld"
+      url = "centos/8-stream/BaseOS/x86_64/os/Packages/firewalld-0.9.11-4.el8.noarch.rpm"
+      checksum = "sha256:d8d0ec11aa614a1eff1522524de246c0600f738f849762f0a70552e9e90466a7"
+    }
+    new {
+      name = "docker"
+      filename = "docker.asc"
+      url = "linux/centos/gpg"
+      checksum = "sha256:e6c650e0700b1bf4868b693b30761b926844befc8a0acb7ac0dd9b1faf1b7423"
+    }
+  }
+  ["yum"] {
+    new {
+      name = "yum"
+      state = "latest"
+      cacheonly = null
+      validate_certs = null
+    }
+  }
+}

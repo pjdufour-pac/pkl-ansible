@@ -1,0 +1,30 @@
+open module file
+
+extends "base.pkl"
+
+import "../tasks/io.pkl" as io
+
+open class AnsibleRoleDefinitionFile extends AnsibleRoleDefinition {
+    defaults = new Mapping<String,unknown> {
+        ["file_path"] = ""
+        ["file_owner"] = "root"
+        ["file_group"] = "root"
+        ["file_mode"] = "0644"
+        ["file_content"] = ""
+    }
+    tasks = new Listing<AnsibleTaskDefinition> {
+        new io.AnsibleTaskDefinitionCopy {
+            name = "Create file"
+            copy = new Copy {
+                dest = "{{ file_path }}"
+                owner = "{{ file_owner }}"
+                group = "{{ file_group }}"
+                mode = "{{ file_mode }}"
+                content = "{{ file_content }}"
+            }
+        }
+    }
+}
+
+function NewAnsibleRoleDefinitionFile(name: String): AnsibleRoleDefinitionFile =
+    new Mapping { ["name"] = name }.toMap().toTyped(AnsibleRoleDefinitionFile)

@@ -1,0 +1,33 @@
+open module time
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/shell.pkl" as tasks_shell
+
+class FactoryTime {
+
+    function EnableTimeSync(_when: When): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Enable Time Sync"
+        shell = new Shell {
+            cmd = "timedatectl set-ntp true"
+        }
+        `when` = _when
+    }
+
+    function DisableTimeSync(_when: When): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Disable Time Sync"
+        shell = new Shell {
+            cmd = "timedatectl set-ntp false"
+        }
+        `when` = _when
+    }
+
+    function SetTimeZone(_name: String): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Set Time Zone"
+        shell = new Shell {
+            cmd = "timedatectl set-timezone {{ "+(utils.slugify(_name))+"_timezone }}"
+        }
+    }
+}

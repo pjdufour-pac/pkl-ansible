@@ -1,0 +1,27 @@
+open module base
+
+extends "../tasks/base.pkl"
+
+import "../tasks/base.pkl" as task_base
+
+open class AnsibleRoleDefinition {
+    name: String
+    defaults: Mapping<String, unknown> = new Mapping<String, unknown> {}
+    extra_defaults: Mapping<String, unknown> = new Mapping<String, unknown> {}
+    tasks: Listing<task_base.AnsibleTaskDefinition> = new Listing<task_base.AnsibleTaskDefinition> {}
+    pre_tasks: Listing<task_base.AnsibleTaskDefinition> = new Listing<task_base.AnsibleTaskDefinition> {}
+    hidden post_tasks = (tasks: Listing<task_base.AnsibleTaskDefinition>) -> tasks
+    service_names: List<String> = List()
+    service_socket_files: List<String> = List()
+    selinux_module: String = ""
+    selinux_extra_modules: Mapping<String,String> = new Mapping<String,String> {}
+    files: Mapping<String,String> = new Mapping<String,String> {}
+    templates: Mapping<String,String> = new Mapping<String,String> {}
+    firewalld_services: List<String> = List()
+    ufw_ports = List()
+    // Dependency Resolution
+    // Requires is a map of ansible distributions to a list of required capabilties for the role
+    // Provides lists the capabilities required by the role
+    requires: Mapping<String,Listing<String>> = new Mapping<String,Listing<String>> {}
+    provides: List<String> = List()
+}

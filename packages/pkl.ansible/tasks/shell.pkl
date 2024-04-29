@@ -1,0 +1,11 @@
+open module shell
+
+extends "become.pkl"
+
+open class AnsibleTaskDefinitionShell extends AnsibleTaskDefinitionBecome {
+    become = true
+    become_user = "root"
+    shell: String|Shell
+    `when`: When?
+    failed_when: When?
+}

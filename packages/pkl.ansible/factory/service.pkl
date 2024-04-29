@@ -1,0 +1,121 @@
+open module service
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/io.pkl" as tasks_io
+import "../tasks/service.pkl" as tasks_service
+
+class FactoryService {
+
+    function StopService(_name: String, service_name: String): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Stop service"
+        service = new Service {
+            name = service_name
+            state = "stopped"
+        }
+        `when` = (utils.slugify(_name))+"_disabled"
+    }
+
+    function StopServices(_name: String, service_names: List<String>): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Stop services"
+        service = new Service {
+            name = "{{ item }}"
+            state = "stopped"
+        }
+        with_items = service_names
+        `when` = (utils.slugify(_name))+"_disabled"
+    }
+
+    function DisableService(_name: String, service_name: String): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Disable service"
+        service = new Service {
+            name = service_name
+            enabled = false
+        }
+        `when` = (utils.slugify(_name))+"_disabled"
+    }
+
+    function DisableServices(_name: String, service_names: List<String>): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Disable services"
+        service = new Service {
+            name = "{{ item }}"
+            enabled = false
+        }
+        with_items = service_names
+        `when` = (utils.slugify(_name))+"_disabled"
+    }
+
+    function RestartService(_name: String, service_name: String): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Restart service"
+        service = new Service {
+            name = service_name
+            state = "restarted"
+        }
+        `when` = "not "+(utils.slugify(_name))+"_disabled"
+    }
+
+    function RestartServices(_name: String, service_names: List<String>): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Restart services"
+        service = new Service {
+            name = "{{ item }}"
+            state = "restarted"
+        }
+        with_items = service_names
+        `when` = "not "+(utils.slugify(_name))+"_disabled"
+    }
+
+    function EnableService(_name: String, service_name: String): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Enable service"
+        service = new Service {
+            name = service_name
+            enabled = true
+        }
+        `when` = "not "+(utils.slugify(_name))+"_disabled"
+    }
+
+    function EnableServices(_name: String, service_names: List<String>): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Enable services"
+        service = new Service {
+            name = "{{ item }}"
+            enabled = true
+        }
+        with_items = service_names
+        `when` = "not "+(utils.slugify(_name))+"_disabled"
+    }
+
+    function RenderServiceTemplates(service_templates: Listing<TemplateFile>): tasks_io.AnsibleTaskDefinitionTemplate = (
+        if(service_templates.length == 1)
+            new tasks_io.AnsibleTaskDefinitionTemplate {
+                name = "Render service configuration"
+                template = new Template {
+                    src = service_templates[0].name
+                    dest = service_templates[0].path
+                    owner = service_templates[0].owner
+                    group = service_templates[0].group
+                    mode = service_templates[0].mode
+                }
+                `when` = (utils.slugify(_name))+"_install"
+            }
+        else
+            new tasks_io.AnsibleTaskDefinitionTemplate {
+                name = "Render service configuration"
+                template = new Template {
+                    src ="{{ item.src }}"
+                    dest = "{{ item.dest }}"
+                    owner =  "{{ item.owner }}"
+                    group = "{{ item.group }}"
+                    mode = "{{ item.mode }}"
+                }
+                with_items = service_templates.toList().map((service_template) -> new Mapping {
+                    ["src"] = service_template.name
+                    ["dest"] = service_template.path
+                    ["owner"] = service_template.owner
+                    ["group"] = service_template.group
+                    ["mode"] = service_template.mode
+                })
+                `when` = (utils.slugify(_name))+"_install"
+            }
+    )
+}

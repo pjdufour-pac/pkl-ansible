@@ -1,0 +1,32 @@
+open module yum
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/yum.pkl" as tasks_yum
+
+class FactoryYum {
+    
+    function InstallYumPackage(_name: String): tasks_yum.AnsibleTaskDefinitionYum = new tasks_yum.AnsibleTaskDefinitionYum {
+        name = "Install "+_name+" on CentOS"
+        yum = new Yum {
+            name = _name
+            state = "{{ "+(utils.slugify(_name))+"_state }}"
+            cacheonly = "{{ "+(utils.slugify(_name))+"_cacheonly }}"
+            validate_certs = "{{ "+(utils.slugify(_name))+"_validate_certs }}"
+        }
+        `when` = (utils.slugify(_name))+"_install and ansible_distribution in [\"CentOS\", \"RedHat\"]"
+    }
+
+    function InstallYumPackages(_name: String, yum_packages: PackageNames): tasks_yum.AnsibleTaskDefinitionYum = new tasks_yum.AnsibleTaskDefinitionYum {
+        name = "Install "+_name+" on CentOS"
+        yum = new Yum {
+            name = yum_packages
+            state = "{{ "+(utils.slugify(_name))+"_state }}"
+            cacheonly = "{{ "+(utils.slugify(_name))+"_cacheonly }}"
+            validate_certs = "{{ "+(utils.slugify(_name))+"_validate_certs }}"
+        }
+        `when` = (utils.slugify(_name))+"_install and ansible_distribution in [\"CentOS\", \"RedHat\"]"
+    }
+}

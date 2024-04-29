@@ -27,6 +27,8 @@ function basename(path: String): String =
 
 function slugify(name: String): String =
     name
+    .toLowerCase()
     .replaceAll("-", "_")
     .replaceAll(".", "_")
-    .replaceAll("+", "_plus")
+    .replaceAll(" ", "_")
+    .chars.mapIndexed((i, c) -> if (c == "+") (if (i > 0) "_" else "")+"plus"+(if (i < name.length - 1 && name[i+1] != "+") "_" else "") else c).fold("", (acc, c) -> acc + c)

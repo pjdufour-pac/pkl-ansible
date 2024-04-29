@@ -1,0 +1,38 @@
+open module shell
+
+extends "base.pkl"
+
+import "../tasks/shell.pkl" as tasks_shell
+
+class AnsibleRoleDefinitionShell extends AnsibleRoleDefinition {
+    defaults = new Mapping<String,unknown> {
+        ["shell_chdir"] = ""
+        ["shell_command"] = ""
+        ["shell_creates"] = ""
+        ["shell_removes"] = ""
+    }
+    tasks = new Listing<AnsibleTaskDefinition> {
+        new tasks_shell.AnsibleTaskDefinitionShell {
+            name = "Run shell commmand"
+            shell = new Shell {
+                chdir = "{{ shell_chdir }}"
+                cmd = "{{ shell_command }}"
+                creates = "{{ shell_creates }}"
+                removes = "{{ shell_removes }}"
+            }
+        }
+    }
+}
+
+function NewAnsibleRoleDefinitionShell(_name: String): AnsibleRoleDefinitionShell =
+    new AnsibleRoleDefinitionShell {
+        name = _name
+    }
+
+function NewAnsibleRoleDefinitionShellOptions(_name: String, options: Mapping<String,unknown>): AnsibleRoleDefinitionShell =
+    (
+        new AnsibleRoleDefinitionShell {
+            name = _name
+        }.toMap() +
+        options.toMap()
+    ).toTyped(AnsibleRoleDefinitionShell)
