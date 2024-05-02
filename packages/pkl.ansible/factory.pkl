@@ -13,6 +13,7 @@ import "factory/selinux.pkl" as selinux
 import "factory/service.pkl" as service
 import "factory/time.pkl" as time
 import "factory/ufw.pkl" as ufw
+import "factory/wheel.pkl" as wheel
 import "factory/yum.pkl" as yum
 
 class Factory {
@@ -26,6 +27,7 @@ class Factory {
     service = new service.FactoryService {}
     time = new time.FactoryTime {}
     ufw = new ufw.FactoryUfw {}
+    wheel = new wheel.FactoryWheel {}
     yum = new yum.FactoryYum {}
 }
 

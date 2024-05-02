@@ -18,6 +18,7 @@ class AnsiblePlaybook {
     name: String
     hosts: String = "all"
     environment: AnsiblePlaybookEnvironment? = null
+    vars: Mapping<String,unknown>?
     pre_tasks: AnsiblePlaybookPreTasks? = null
     roles: Listing<AnsiblePlaybookRole|String>|List<AnsiblePlaybookRole|String> = null
 }

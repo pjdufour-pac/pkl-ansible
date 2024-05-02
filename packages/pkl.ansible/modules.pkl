@@ -31,6 +31,10 @@ class AptRepository {
     update_cache: When?
 }
 
+class Args {
+    chdir: String?
+}
+
 class Debug {
     var: String
 }

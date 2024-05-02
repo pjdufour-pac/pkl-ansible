@@ -1,0 +1,47 @@
+open module rpm
+
+extends "base.pkl"
+
+import "@utils/utils.pkl" as utils
+
+// Import modules
+import "../modules.pkl" as modules
+
+// Import factory
+import "../factory.pkl" as mod_factory
+
+// Import tasks
+import "../tasks/base.pkl" as tasks_base
+
+class AnsibleRoleDefinitionWheel extends AnsibleRoleDefinition {
+    // Dependency Resolution
+    provides = ((that) -> List(that.name)).apply(this)
+    requires = new Mapping {}
+    //
+    mirror: String
+    url: String
+    checksum: String
+    templates = new Mapping<String,String>{}
+    defaults = ((that) -> new Mapping<String,unknown> {
+        [utils.slugify(name)+"_wheel_url"] = if(that.mirror != null && that.mirror.length > 0) (that.mirror+"/"+that.url) else (that.url)
+        [utils.slugify(name)+"_wheel_checksum"] = that.checksum
+        [utils.slugify(name)+"_wheel_validate_certs"] = true
+        [utils.slugify(name)+"_wheel_pip_exec"] = "pip3"
+        [utils.slugify(name)+"_install"] = true
+        for(_key, _value in that.extra_defaults) {
+            [_key] = _value
+        }
+    }).apply(this)
+    tasks = this.post_tasks.apply(((that) -> new Listing<tasks_base.AnsibleTaskDefinition> {
+        local factory = new mod_factory.Factory {}
+        for(_task in that.pre_tasks) {
+            _task
+        }
+        factory.io.CreateDirectories(new Listing<String> {
+            "/opt/"+ (utils.slugify(that.name))
+            "/opt/"+ (utils.slugify(that.name)) + "/wheel"
+        })
+        factory.wheel.DownloadWheel(that.name)
+        factory.wheel.InstallWheel(that.name)
+    }).apply(this))
+}

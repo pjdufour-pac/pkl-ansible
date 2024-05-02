@@ -29,7 +29,7 @@ package {
   apiTests = tests // api tests are shared with module tests
   baseUri = "package://github.com/pjdufour-pac/pkl-packages/packages/\(name)"
   packageZipUrl = "https://github.com/pjdufour-pac/pkl-packages/releases/download/\(name)@\(version)/\(name)@\(version).zip"
-  license = "Apache-2.0"
+  license = "MIT"
   authors {
     "Patrick Dufour <patrick.j.dufour.civ@us.navy.mil>"
   }

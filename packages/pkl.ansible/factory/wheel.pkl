@@ -1,0 +1,34 @@
+open module rpm
+
+extends "../modules.pkl"
+
+import "@utils/utils.pkl" as utils
+
+import "../tasks/core.pkl" as tasks_core
+import "../tasks/shell.pkl" as tasks_shell
+
+class FactoryWheel {
+
+    function DownloadWheel(_name: String): tasks_core.AnsibleTaskDefinitionIncludeRole = new tasks_core.AnsibleTaskDefinitionIncludeRole {
+        name = "Download "+_name+" Python wheel"
+        include_role = new IncludeRole {
+            name = "fetch"
+        }
+        vars = new Mapping<String,unknown> {
+            ["file_url"] = "{{ "+(utils.slugify(_name))+"_wheel_url }}"
+            ["file_checksum"] = "{{ "+(utils.slugify(_name))+"_wheel_checksum }}"
+            ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/wheel"
+            ["fetch_validate_certs"] = "{{ "+(utils.slugify(_name))+"_wheel_validate_certs }}"
+        }
+    }
+
+    function InstallWheel(_name: String): tasks_shell.AnsibleTaskDefinitionShell = new tasks_shell.AnsibleTaskDefinitionShell {
+        name = "Install Python Wheel"
+        shell = "bash -c 'export \"PATH=/usr/local/bin:$PATH\" && {{ "+(utils.slugify(_name))+"_wheel_pip_exec }} install /opt/"+(utils.slugify(_name))+"/wheel/{{ "+(utils.slugify(_name))+"_wheel_url | basename }}'"
+        args = new Args {
+            chdir = "/opt"
+        }
+        `when` = (utils.slugify(_name))+"_install"
+    }
+
+}

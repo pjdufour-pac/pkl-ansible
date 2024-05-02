@@ -32,7 +32,7 @@ class FactoryRpm {
             ["file_url"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_url }}"
             ["file_checksum"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_checksum }}"
             ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/asc"
-            ["validate_certs"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_validate_certs }}"
+            ["fetch_validate_certs"] = "{{ "+(utils.slugify(rpm_key.name))+"_key_validate_certs }}"
         }
     }
 
@@ -45,7 +45,7 @@ class FactoryRpm {
             ["file_url"] = "{{ item.file_url }}"
             ["file_checksum"] = "{{ item.file_checksum }}"
             ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/asc"
-            ["validate_certs"] = "{{ item.validate_certs }}"
+            ["fetch_validate_certs"] = "{{ item.validate_certs }}"
         }
         with_items = new Listing<Mapping> {
             for(rpm_key in rpm_keys) {
@@ -67,7 +67,7 @@ class FactoryRpm {
             ["file_url"] = "{{ "+(utils.slugify(_name))+"_rpm_url }}"
             ["file_checksum"] = "{{ "+(utils.slugify(_name))+"_rpm_checksum }}"
             ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/rpm"
-            ["validate_certs"] = "{{ "+(utils.slugify(_name))+"_rpm_validate_certs }}"
+            ["fetch_validate_certs"] = "{{ "+(utils.slugify(_name))+"_rpm_validate_certs }}"
         }
     }
 
@@ -80,7 +80,7 @@ class FactoryRpm {
             ["file_url"] = "{{ item.file_url }}"
             ["file_checksum"] = "{{ item.file_checksum }}"
             ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/rpm"
-            ["validate_certs"] = "{{ item.rpm_validate_certs }}"
+            ["fetch_validate_certs"] = "{{ item.rpm_validate_certs }}"
         }
         with_items = new Listing<Mapping> {
             for(rpm_package in rpm_packages) {

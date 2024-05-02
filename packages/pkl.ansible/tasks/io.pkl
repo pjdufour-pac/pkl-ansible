@@ -33,6 +33,8 @@ class AnsibleTaskDefinitionLineInFile extends AnsibleTaskDefinitionBecome {
     become = true
     become_user = "root"
     lineinfile: LineInFile
+    with_items: Items?
+    `when`: When?
 }
 
 class AnsibleTaskDefinitionTemplate extends AnsibleTaskDefinitionBecome {

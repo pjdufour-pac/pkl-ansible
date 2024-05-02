@@ -8,7 +8,6 @@ abstract class AnsibleTaskDefinition {
     name: String
     with_items: Items?
     register: String?
-    //fixed `when`: When?
 }
 
 abstract class AnsibleTaskDefinitionBecome extends AnsibleTaskDefinition {
