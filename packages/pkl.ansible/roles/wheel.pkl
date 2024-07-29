@@ -15,13 +15,13 @@ import "../tasks/base.pkl" as tasks_base
 
 class AnsibleRoleDefinitionWheel extends AnsibleRoleDefinition {
     // Dependency Resolution
-    provides = ((that) -> List(that.name)).apply(this)
+    provides = ((that) -> new Listing { that.name }).apply(this)
     requires = new Mapping {}
     //
     mirror: String
     url: String
     checksum: String
-    templates = new Mapping<String,String>{}
+    extra_templates = new Mapping<String,String>{}
     defaults = ((that) -> new Mapping<String,unknown> {
         [utils.slugify(name)+"_wheel_url"] = if(that.mirror != null && that.mirror.length > 0) (that.mirror+"/"+that.url) else (that.url)
         [utils.slugify(name)+"_wheel_checksum"] = that.checksum

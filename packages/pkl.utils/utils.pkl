@@ -8,7 +8,7 @@
 module pkl.utils.utils
 
 function distinct(list: List): List =
-    list.distinctBy((x) -> x)
+    list.distinctBy((x) -> x.toString())
 
 function flatten(list: List|Listing): List =
     if(list is List)
@@ -19,7 +19,7 @@ function flatten(list: List|Listing): List =
 function read_checksums(file: String): Map<String,String> =
     read(file).text.split("\n").map((line) -> (
         let (parts = line.split(Regex("\\s+"))) Map(parts[1], parts[0])
-    )).fold(Map(), (acc, x) -> acc + x)
+    )).fold(Map(), (acc, x) -> acc + x) + Map("", "")
 
 function basename(path: String): String =
     let (parts = path.split("/"))

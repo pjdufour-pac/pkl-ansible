@@ -7,6 +7,7 @@ class AnsibleTaskDefinitionCopy extends AnsibleTaskDefinitionBecome {
     become_user = "root"
     copy: Copy
     with_items: Items?
+    `when`: When?
 }
 
 class AnsibleTaskDefinitionFile extends AnsibleTaskDefinitionBecome {

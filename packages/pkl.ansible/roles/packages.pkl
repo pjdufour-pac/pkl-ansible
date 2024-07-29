@@ -20,7 +20,7 @@ typealias YumPackages = String|List<String>|Listing<String>
 
 class AnsibleRoleDefinitionPackages extends AnsibleRoleDefinition {
     // Dependency Resolution
-    provides = ((that) -> List(that.name)).apply(this)
+    provides = ((that) -> new Listing { that.name }).apply(this)
     requires = new Mapping {}
     //
     apt_packages: AptPackages = List()
@@ -28,6 +28,7 @@ class AnsibleRoleDefinitionPackages extends AnsibleRoleDefinition {
     apt_keys: AptKeys = List()
     apt_sources: Mapping<String,String> = new Mapping<String,String> {}
     yum_packages: YumPackages = List()
+    yum_repos: YumRepos = new Mapping<String,Mapping<String,String>> {}
     defaults = new Mapping<String,unknown> {
         [utils.slugify(name)+"_state"] = "latest"
         [utils.slugify(name)+"_cacheonly"] = false
@@ -43,10 +44,24 @@ class AnsibleRoleDefinitionPackages extends AnsibleRoleDefinition {
             [_key] = _value
         }
     }
+    templates = new Mapping<String,String> {
+        for (repo_name, repo_properties in yum_repos) {
+            [repo_name+".repo"] = "["+repo_name+"]\n"+repo_properties.toMap().entries.map((property) -> property.key+"="+property.value).join("\n")
+        }
+        for(_key, _value in extra_templates) {
+            [_key] = _value
+        }
+    }
     tasks = this.post_tasks.apply(((that) -> new Listing<AnsibleTaskDefinition> {
         local factory = new mod_factory.Factory {}
         for(_task in that.pre_tasks) {
             _task
+        }
+        when(that.yum_repos != null && that.yum_repos.length == 1) {
+            factory.yum.InstallYumRepo(that.yum_repos.toMap().entries[0].key)
+        }
+        when(that.yum_repos != null && that.yum_repos.length > 1) {
+            factory.yum.InstallYumRepos(that.yum_repos)
         }
         when(that.yum_packages.length > 0) {
             factory.yum.InstallYumPackages(that.name, that.yum_packages)

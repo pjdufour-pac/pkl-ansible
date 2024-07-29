@@ -4,6 +4,7 @@ extends "../modules.pkl"
 
 import "@utils/utils.pkl" as utils
 
+import "../tasks/io.pkl" as tasks_io
 import "../tasks/yum.pkl" as tasks_yum
 
 class FactoryYum {
@@ -28,5 +29,33 @@ class FactoryYum {
             validate_certs = "{{ "+(utils.slugify(_name))+"_validate_certs }}"
         }
         `when` = (utils.slugify(_name))+"_install and ansible_distribution in [\"CentOS\", \"RedHat\"]"
+    }
+
+    function InstallYumRepo(repo_name: String): tasks_io.AnsibleTaskDefinitionCopy = new tasks_io.AnsibleTaskDefinitionCopy {
+        name = "Install YUM repository on CentOS"
+        copy = new Copy {
+            src = repo_name+".repo"
+            dest = "/etc/yum.repos.d/"+repo_name+".repo"
+            owner = "root"
+            group = "root"
+            mode = "0644"
+        }
+        `when` = "ansible_distribution in [\"CentOS\", \"RedHat\"]"
+    }
+
+    function InstallYumRepos(yum_repos: YumRepos): tasks_io.AnsibleTaskDefinitionCopy = new tasks_io.AnsibleTaskDefinitionCopy {
+        name = "Install YUM repositories on CentOS"
+        template = new Template {
+            src = "{{ item.src }}"
+            dest = "{{ item.dest }}"
+            owner = "root"
+            group = "root"
+            mode = "0644"
+        }
+        `when` = "ansible_distribution in [\"CentOS\", \"RedHat\"]"
+        with_items = yum_repos.toMap().entries.map((repo) -> new Mapping<String,String> {
+            ["src"] = repo.key+".repo"
+            ["dest"] = "/etc/yum.repos.d/"+repo.key+".repo"
+        })
     }
 }

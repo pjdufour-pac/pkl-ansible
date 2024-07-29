@@ -58,16 +58,16 @@ class FactoryRpm {
         }
     }
 
-    function DownloadRpm(_name: String): tasks_core.AnsibleTaskDefinitionIncludeRole = new tasks_core.AnsibleTaskDefinitionIncludeRole {
-        name = "Download "+_name+" RPM"
+    function DownloadRpm(_name: String, rpm_package: RpmPackage): tasks_core.AnsibleTaskDefinitionIncludeRole = new tasks_core.AnsibleTaskDefinitionIncludeRole {
+        name = "Download RPM"
         include_role = new IncludeRole {
             name = "fetch"
         }
         vars = new Mapping<String,unknown> {
-            ["file_url"] = "{{ "+(utils.slugify(_name))+"_rpm_url }}"
-            ["file_checksum"] = "{{ "+(utils.slugify(_name))+"_rpm_checksum }}"
+            ["file_url"] = "{{ "+(utils.slugify(rpm_package.name))+"_rpm_url }}"
+            ["file_checksum"] = "{{ "+(utils.slugify(rpm_package.name))+"_rpm_checksum }}"
             ["dir_path"] = "/opt/"+(utils.slugify(_name))+"/rpm"
-            ["fetch_validate_certs"] = "{{ "+(utils.slugify(_name))+"_rpm_validate_certs }}"
+            ["fetch_validate_certs"] = "{{ "+(utils.slugify(rpm_package.name))+"_rpm_validate_certs }}"
         }
     }
 

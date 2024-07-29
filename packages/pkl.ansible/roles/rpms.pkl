@@ -18,11 +18,16 @@ import "../tasks/yum.pkl" as tasks_yum
 
 class AnsibleRoleDefinitionRpms extends AnsibleRoleDefinition {
     // Dependency Resolution
-    provides = ((that) -> List(that.name)).apply(this)
+    provides = ((that) -> new Listing { that.name }).apply(this)
     requires = new Mapping {}
     //
     rpm_package_mirror = ""
     rpm_packages: List<modules.RpmPackage>|Listing<modules.RpmPackage>
+    rpm_packages_install = ((that) -> new Listing {
+        for(rpm_package in that.rpm_packages) {
+            "/opt/"+ (utils.slugify(that.name)) + "/rpm/{{ "+utils.slugify(rpm_package.name)+"_rpm_url | basename }}"
+        }
+    }).apply(this)
     rpm_key_mirror = ""
     rpm_keys = new Listing<modules.RpmKey> {}
     files = new Mapping<String, String>{
@@ -30,7 +35,7 @@ class AnsibleRoleDefinitionRpms extends AnsibleRoleDefinition {
             [selinux_module_name+".te"] = selinux_module_content
         }
     }
-    templates = new Mapping<String, String>{}
+    extra_templates = new Mapping<String, String>{}
     defaults = ((that) -> new Mapping<String,unknown> {
         for(rpm_package in that.rpm_packages) {
             [utils.slugify(rpm_package.name)+"_rpm_url"] = if(that.rpm_package_mirror != null && that.rpm_package_mirror.length > 0) (that.rpm_package_mirror+"/"+rpm_package.url) else (rpm_package.url)
@@ -65,6 +70,11 @@ class AnsibleRoleDefinitionRpms extends AnsibleRoleDefinition {
             [_key] = _value
         }
     }).apply(this)
+    templates = new Mapping<String,String> {
+        for(_key, _value in extra_templates) {
+            [_key] = _value
+        }
+    }
     tasks = this.post_tasks.apply(((that) -> new Listing<AnsibleTaskDefinition> {
         local factory = new mod_factory.Factory {}
         for(_task in that.pre_tasks) {
@@ -73,8 +83,12 @@ class AnsibleRoleDefinitionRpms extends AnsibleRoleDefinition {
         factory.io.CreateDirectories(new Listing<String> {
             "/opt/"+ (utils.slugify(that.name))
             "/opt/"+ (utils.slugify(that.name)) + "/rpm"
+            when(that.rpm_keys != null && that.rpm_keys.length > 0) {
             "/opt/"+ (utils.slugify(that.name)) + "/asc"
+            }
+            when(that.selinux_extra_modules.length > 0) {
             "/opt/"+ (utils.slugify(that.name)) + "/selinux"
+            }
         })
         when(that.rpm_keys != null && that.rpm_keys.length == 1) {
             factory.rpm.DownloadRpmKey(that.name, that.rpm_keys[0])
@@ -90,20 +104,12 @@ class AnsibleRoleDefinitionRpms extends AnsibleRoleDefinition {
             shell = new Shell {
                 cmd = "rpm --checksig {{ item }}"
             }
-            with_items = new Listing<Mapping> {
-                for(rpm_package in that.rpm_packages) {
-                    "/opt/"+ (utils.slugify(that.name)) + "/rpm/{{ "+utils.slugify(rpm_package.name)+"_rpm_url | basename }}"
-                }
-            }
+            with_items = that.rpm_packages_install
         }
         new tasks_yum.AnsibleTaskDefinitionYum {
             name = "Install "+that.name+" on CentOS"
             yum = new modules.Yum {
-                name = new Listing {
-                    for(rpm_package in rpm_packages) {
-                        "/opt/"+ (utils.slugify(that.name)) + "/rpm/{{ "+utils.slugify(rpm_package.name)+"_rpm_url | basename }}"
-                    }
-                }
+                name = that.rpm_packages_install
                 state = "{{ "+utils.slugify(that.name)+"_state }}"
                 cacheonly = "{{ "+utils.slugify(that.name)+"_cacheonly }}"
                 validate_certs = "{{ "+utils.slugify(that.name)+"_validate_certs }}"

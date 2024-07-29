@@ -9,7 +9,7 @@ import "../factory.pkl" as mod_factory
 
 class AnsibleRoleDefinitionPackage extends AnsibleRoleDefinition {
     // Dependency Resolution
-    provides = ((that) -> List(that.name)).apply(this)
+    provides = ((that) -> new Listing { that.name }).apply(this)
     requires = new Mapping {}
     //
     defaults = ((that) -> new Mapping<String,unknown> {

@@ -17,11 +17,12 @@ open class AnsibleRoleDefinition {
     selinux_extra_modules: Mapping<String,String> = new Mapping<String,String> {}
     files: Mapping<String,String> = new Mapping<String,String> {}
     templates: Mapping<String,String> = new Mapping<String,String> {}
+    extra_templates: Mapping<String,String> = new Mapping<String,String> {}
     firewalld_services: List<String> = List()
     ufw_ports = List()
     // Dependency Resolution
     // Requires is a map of ansible distributions to a list of required capabilties for the role
     // Provides lists the capabilities required by the role
-    requires: Mapping<String,Listing<String>> = new Mapping<String,Listing<String>> {}
-    provides: List<String> = List()
+    requires: Mapping<String,Listing<String>|Mapping<String,Listing<String>>> = new Mapping<String,Listing<String>|Mapping<String,Listing<String>>> {}
+    provides: Listing<String> = New Listing {}
 }

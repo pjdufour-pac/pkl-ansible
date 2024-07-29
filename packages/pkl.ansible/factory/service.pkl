@@ -66,6 +66,15 @@ class FactoryService {
         `when` = "not "+(utils.slugify(_name))+"_disabled"
     }
 
+    function StartService(_name: String, service_name: String): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
+        name = "Start service"
+        service = new Service {
+            name = service_name
+            state = "started"
+        }
+        `when` = "not "+(utils.slugify(_name))+"_disabled"
+    }
+
     function EnableService(_name: String, service_name: String): tasks_service.AnsibleTaskDefinitionService = new tasks_service.AnsibleTaskDefinitionService {
         name = "Enable service"
         service = new Service {

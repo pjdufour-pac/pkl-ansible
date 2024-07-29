@@ -15,6 +15,7 @@ import "roles/rpms.pkl" as roles_rpms
 open class Resolver {
 
   ansible_distribution = ""
+  ansible_distribution_major_version = "0"
   yum_repo_enabled = false
   epel_release_enabled = false
   apt_repo_enabled = false
@@ -46,7 +47,7 @@ open class Resolver {
     .fold(Map(), (result, entry) -> result + entry.value.provides.fold(Map(), (acc, c) -> acc.put(c, List())))
     .mapValues(
       (k1, v1) -> roles
-        .filter((k2, v2) -> v2.provides.contains(k1))
+        .filter((k2, v2) -> v2.provides.toList().contains(k1))
         .keys
         .sortWith((a, b) -> (a is roles_package.AnsibleRoleDefinitionPackage) || (a is roles_packages.AnsibleRoleDefinitionPackages))
     )
@@ -57,7 +58,7 @@ open class Resolver {
     .fold(Map(), (result, entry) -> result + entry.value.provides.fold(Map(), (acc, c) -> acc.put(c, List())))
     .mapValues(
       (k1, v1) -> roles
-        .filter((k2, v2) -> v2.provides.contains(k1))
+        .filter((k2, v2) -> v2.provides.toList().contains(k1))
         .keys
         .sortWith((a, b) -> (a is roles_package.AnsibleRoleDefinitionPackage) || (a is roles_packages.AnsibleRoleDefinitionPackages))
         .first
@@ -73,9 +74,13 @@ open class Resolver {
     )
     filtered
     .mapValues((k, v) ->
-      (v.requires.getOrNull(ansible_distribution) ?? new Listing {})
+      (
+        let (r = v.requires.getOrNull(ansible_distribution) ?? new Listing {})
+        if (r is Mapping) (r.getOrNull(ansible_distribution_major_version) ?? new Listing {})
+        else r
+      )
       .toList()
-      .map((x) -> preferred.getOrNull(x) ?? "!"+x)
+      .map((x) -> preferred.getOrNull(x) ?? "Role "+x+" not available for ansible distribution "+ansible_distribution)
     )
 
   function CompactRoles(
@@ -87,35 +92,40 @@ open class Resolver {
     definitions: Map<String, tasks_base.AnsibleTaskDefinition>
   ): List<tasks_base.AnsibleTaskDefinition> = names.map((name) -> definitions[name])
 
-  function GetNamesForRoles(
-    names: List<String>,
+  function GetDefinitionsForRoles(
+    roles: List<String|AnsiblePlaybookRole>,
     definitions: Map<String, AnsiblePlaybookRole>
-  ): List<AnsiblePlaybookRole> = names.map((name) -> definitions[name])
+  ): List<AnsiblePlaybookRole> = roles.map((role) -> if (role is String) definitions[role] else role)
 
   function ExpandRole(
-    name: String,
+    role: String|AnsiblePlaybookRole,
     dependencies: Map<String,  Function1|List<String>>,
     env: Map<String,String>
   ): List =
     let (that = this)
-    if (name == null) (
+    if (role == null) (
       List()
     ) else (
-      if(dependencies.containsKey(name))
-        that.ExpandRoles(
-          (if(dependencies[name] is Function1) dependencies[name].apply(env) else dependencies[name]), dependencies, env
-        ) +
-        List(name)
-      else (
-        List(name)
-      )
+      // If role is a string, then check dependencies
+      if (role is String)
+        if(dependencies.containsKey(role))
+          that.ExpandRoles(
+            (if(dependencies[role] is Function1) dependencies[role].apply(env) else dependencies[role]), dependencies, env
+          ) +
+          List(role)
+        else (
+          List(role)
+        )
+      else
+        // Don't do dependency checking on fully defined roles
+        List(role)
     )
 
   function ExpandRoles(
-    names: List<String>,
+    roles: List<String|AnsiblePlaybookRole>,
     dependencies: Map<String, Function1|List<String>>,
     env: Map<String,String>
-  ): List = let (that = this) names.map((name) -> that.ExpandRole(name, dependencies, env))
+  ): List = let (that = this) roles.map((role) -> that.ExpandRole(role, dependencies, env))
 
   function GetRoleForCapability(
     names: List<String>,
@@ -133,7 +143,7 @@ open class Resolver {
     names.map((name) -> preferred[name])
 
   function RenderRoles(
-      names: List<String>,
+      roles: List<String|AnsiblePlaybookRole>,
       role_definitions: Map<String, roles_base.AnsibleRoleDefinition>,
       role_references: Map<String,AnsiblePlaybookRole>,
       dependencies: Map<String, Function1|List<String>>,
@@ -143,10 +153,10 @@ open class Resolver {
         all_dependencies = dependencies.toMap() + that.MapRolesToDependencies(role_definitions)
       )
       that.CompactRoles(
-        that.GetNamesForRoles(
+        that.GetDefinitionsForRoles(
           utils.distinct(
             utils.flatten(
-              that.ExpandRoles(names, all_dependencies, env)
+              that.ExpandRoles(roles, all_dependencies, env)
             )
           ),
           role_references
@@ -154,9 +164,10 @@ open class Resolver {
       )
 }
 
-function NewResolver(ansible_distribution: String, yum_repo_enabled: Boolean, epel_release_enabled: Boolean): Resolver
+function NewResolver(ansible_distribution: String, ansible_distribution_major_version: String, yum_repo_enabled: Boolean, epel_release_enabled: Boolean): Resolver
   = new Mapping {
     ["ansible_distribution"] = ansible_distribution
+    ["ansible_distribution_major_version"] = ansible_distribution_major_version
     ["yum_repo_enabled"] = yum_repo_enabled
     ["epel_release_enabled"] = epel_release_enabled
   }.toMap().toTyped(Resolver)

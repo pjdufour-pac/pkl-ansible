@@ -17,19 +17,18 @@ import "../tasks/yum.pkl" as tasks_yum
 
 class AnsibleRoleDefinitionRpm extends AnsibleRoleDefinition {
     // Dependency Resolution
-    provides = ((that) -> List(that.name)).apply(this)
+    provides = ((that) -> new Listing { that.name }).apply(this)
     requires = new Mapping {}
     //
-    mirror: String
-    url: String
-    checksum: String
+    rpm_package: modules.RpmPackage
+    //
     rpm_key_mirror = ""
     rpm_keys = new Listing<RpmKey> {}
-    templates = new Mapping<String,String>{}
+    extra_templates = new Mapping<String,String>{}
     defaults = ((that) -> new Mapping<String,unknown> {
-        [utils.slugify(name)+"_rpm_url"] = if(mirror != null && mirror.length > 0) (mirror+"/"+url) else (url)
-        [utils.slugify(name)+"_rpm_checksum"] = checksum
-        [utils.slugify(name)+"_rpm_validate_certs"] = true
+        [utils.slugify(that.rpm_package.name)+"_rpm_url"] = that.rpm_package.url
+        [utils.slugify(that.rpm_package.name)+"_rpm_checksum"] = that.rpm_package.checksum
+        [utils.slugify(that.rpm_package.name)+"_rpm_validate_certs"] = true
         [utils.slugify(name)+"_state"] = "present"
         [utils.slugify(name)+"_cacheonly"] = false
         [utils.slugify(name)+"_validate_certs"] = true
@@ -58,6 +57,11 @@ class AnsibleRoleDefinitionRpm extends AnsibleRoleDefinition {
             [_key] = _value
         }
     }).apply(this)
+    templates = new Mapping<String,String> {
+        for(_key, _value in extra_templates) {
+            [_key] = _value
+        }
+    }
     tasks = this.post_tasks.apply(((that) -> new Listing<tasks_base.AnsibleTaskDefinition> {
         local factory = new mod_factory.Factory {}
         for(_task in that.pre_tasks) {
@@ -73,17 +77,17 @@ class AnsibleRoleDefinitionRpm extends AnsibleRoleDefinition {
         }
         when(that.rpm_keys != null && that.rpm_keys.length > 1) {
             factory.rpm.DownloadRpmKeys(that.name, that.rpm_keys)
-           factory.rpm.ImportRpmKeys(that.name, that.rpm_keys)
+            factory.rpm.ImportRpmKeys(that.name, that.rpm_keys)
         }
-        factory.rpm.DownloadRpm(that.name)
+        factory.rpm.DownloadRpm(that.name, that.rpm_package)
         new tasks_shell.AnsibleTaskDefinitionShell {
             name = "Check signature of "+that.name+" RPM"
-            shell = "rpm --checksig /opt/"+(utils.slugify(that.name))+"/rpm/{{ "+(utils.slugify(that.name))+"_rpm_url | basename }}"
+            shell = "rpm --checksig /opt/"+(utils.slugify(that.name))+"/rpm/{{ "+(utils.slugify(that.rpm_package.name))+"_rpm_url | basename }}"
         }
         new tasks_yum.AnsibleTaskDefinitionYum {
             name = "Install "+that.name+" on CentOS"
             yum = new modules.Yum {
-                name = "/opt/"+(utils.slugify(that.name))+"/rpm/{{ "+(utils.slugify(that.name))+"_rpm_url | basename }}"
+                name = "/opt/"+(utils.slugify(that.name))+"/rpm/{{ "+(utils.slugify(that.rpm_package.name))+"_rpm_url | basename }}"
                 state = "{{ "+utils.slugify(that.name)+"_state }}"
                 cacheonly = "{{ "+utils.slugify(that.name)+"_cacheonly }}"
                 validate_certs = "{{ "+utils.slugify(that.name)+"_validate_certs }}"

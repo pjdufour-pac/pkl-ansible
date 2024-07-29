@@ -15,6 +15,8 @@ typealias Repo = String
 
 typealias Checksum = String(length == 71 && startsWith("sha256:"))
 
+typealias RpmRepo = ""|"appstream"|"baseos"|"crb"|"docker-ce-stable"|"epel"|"epel-cisco-openh264"|"epel-modular"|"epel-next"|"extras"|"extras-common"|"mongodb"
+
 class Apt {
     name: Name?
     state: String?
@@ -77,6 +79,7 @@ class LineInFile {
 
 class RpmPackage {
     name: String
+    repo: RpmRepo = ""
     url: String
     checksum: Checksum
 }

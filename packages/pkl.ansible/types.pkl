@@ -10,3 +10,5 @@ open class TemplateFile {
 }
 
 typealias PackageNames = String|List<String>|Listing<String>
+
+typealias YumRepos = Mapping<String,Mapping<String,String>>
